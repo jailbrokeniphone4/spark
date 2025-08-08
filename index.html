@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sparks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- p5.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      height: 100%;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+<script>
+  let sparks = [];
+
+  // Utility: ensure inputs to lerpColor are p5 colors
+  function toColor(c) {
+    if (c instanceof p5.Color) return c;
+    if (typeof c === 'number') return color(c); // grayscale
+    return c; // assume already a color or undefined
+  }
+
+  const Spark = (function () {
+    const _Spark = function (config = {}) {
+      this.x = config.x || 0;
+      this.y = config.y || 0;
+
+      this.angle = config.angle || random(config.minAngle || 0, config.maxAngle || 360);
+      this.v = config.v || random(config.minV || 2, config.maxV || 10);
+      this.xv = sin(this.angle) * this.v;
+      this.yv = cos(this.angle) * this.v;
+
+      const minC = toColor(config.minCol) || color(random(0, 255), random(0, 255), random(0, 255));
+      const maxC = toColor(config.maxCol) || color(random(0, 255), random(0, 255), random(0, 255));
+      this.col = config.col || lerpColor(minC, maxC, random());
+
+      this.weight = config.weight || 1;
+      this.dead = false;
+
+      this.update = function () {
+        stroke(this.col);
+        strokeWeight(this.weight);
+        line(this.x, this.y, this.x + this.xv * 2, this.y + this.yv * 2);
+        this.x += this.xv;
+        this.y += this.yv;
+
+        if (
+          this.x + this.weight < 0 ||
+          this.x - this.weight > width ||
+          this.y + this.weight < 0 ||
+          this.y - this.weight > height
+        ) {
+          this.dead = true;
+        }
+      };
+    };
+
+    _Spark.update = function () {
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        sparks[i].update();
+        if (sparks[i].dead) {
+          sparks.splice(i, 1);
+        }
+      }
+    };
+
+    _Spark.add = function (config = {}) {
+      if (config.num) {
+        for (let i = 0; i < config.num; i++) {
+          sparks.push(new _Spark(config));
+        }
+      } else {
+        sparks.push(new _Spark(config));
+      }
+    };
+
+    return _Spark;
+  })();
+
+  function setup() {
+    createCanvas(windowWidth, windowHeight);
+    angleMode(DEGREES); // your code uses degrees for sin/cos
+    strokeCap(ROUND);
+    textSize(16);
+    noCursor();
+  }
+
+  function draw() {
+    background(255);
+    // Update and render sparks
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      sparks[i].update();
+      if (sparks[i].dead) {
+        sparks.splice(i, 1);
+      }
+    }
+
+    // HUD
+    noStroke();
+    fill(0);
+    text('Sparks: ' + sparks.length, 16, 28);
+  }
+
+  function mousePressed() {
+    // Use p5.Color objects for lerpColor to work correctly
+    Spark.add({
+      x: mouseX,
+      y: mouseY,
+      weight: 3,
+      minCol: color(255), // white
+      maxCol: color(128), // mid gray
+      num: 100
+    });
+  }
+
+  function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+  }
+</script>
+</body>
+</html>
